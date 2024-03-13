@@ -1,3 +1,5 @@
+import { calculatePrecisionErrorPercentage } from "./precisionCalculator.js";
+
 document.addEventListener('DOMContentLoaded', function () {
     let audioContext = new (window.AudioContext || window.webkitAudioContext)();
     let oscillator = null;
@@ -10,6 +12,8 @@ document.addEventListener('DOMContentLoaded', function () {
     let interval;
 
     function playClick() {
+        const bpm = scenarios[scenarioIndex];
+        const beatDuration = 60 / bpm;
         oscillator = audioContext.createOscillator();
         oscillator.type = 'square';
         oscillator.frequency.setValueAtTime(1000, audioContext.currentTime);
@@ -27,6 +31,7 @@ document.addEventListener('DOMContentLoaded', function () {
             let tempo = scenarios[scenarioIndex];
             document.getElementById('tempo').textContent = `Current Tempo: ${tempo}bpm`;
             const intervalTime = 60000 / tempo; // Convert BPM to milliseconds
+            playClick(); // Play the first click immediately to avoid any overlaps
             interval = setInterval(playClick, intervalTime);
             isPlaying = true;
             document.getElementById('startStopButton').textContent = 'Stop';
@@ -50,8 +55,18 @@ document.addEventListener('DOMContentLoaded', function () {
         pressTimes.push(pressTime);
         if (pressTimes.length == 4) {
             console.log(`Press Times: ${pressTimes}`);
-            calculatePrecisionDifference();
+            const diff = calculatePrecisionErrorPercentage(scenarios[scenarioIndex], differencesWithIntervals);
+
+            console.log(`The difference is ${diff}% per beat`)
+            if (diff <= 25) {
+                console.log(`This is great. Run test again with increased metronome if not already on max yet`);
+            }
+            else {
+                console.log(`Move user to next screen. Metronome test is completed.`);
+            }
+            // calculatePrecisionDifference();
             pressTimes = [];
+            differencesWithIntervals = [];
             scenarioIndex++;
             if (scenarioIndex < scenarios.length) {
                 startStopMetronome();
@@ -67,17 +82,18 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    function calculatePrecisionDifference() {
-        const metronomeBpm = scenarios[scenarioIndex];
-        const expectedInterval = 60000 / metronomeBpm;
-        const averageDifference = differencesWithIntervals.reduce((sum, diff) => sum + diff, 0) / differencesWithIntervals.length;
-        console.log("Expected Interval:", expectedInterval.toFixed(3), "milliseconds");
-        console.log("Differences", differencesWithIntervals.join(", "));
-        console.log("Average Difference:", averageDifference.toFixed(3), "milliseconds");
-        //for showing expected and actual diffecrence 
-        document.getElementById('expected-diff').innerHTML = `Expected Diff: ${expectedInterval.toFixed(3)} ms`;
-        document.getElementById('average-diff').innerHTML = `Actual Diff: ${averageDifference.toFixed(3)} ms`;
-    }
+    // function calculatePrecisionDifference() {
+    //     const metronomeBpm = scenarios[scenarioIndex];
+    //     const expectedInterval = 60000 / metronomeBpm;
+    //     const averageDifference = differencesWithIntervals.reduce((sum, diff) => sum + diff, 0) / differencesWithIntervals.length;
+    //     console.log("Expected Interval:", expectedInterval.toFixed(3), "milliseconds");
+    //     console.log("Differences", differencesWithIntervals.join(", "));
+    //     console.log("Average Difference:", averageDifference.toFixed(3), "milliseconds");
+    //     //for showing expected and actual diffecrence 
+    //     document.getElementById('expected-diff').innerHTML = `Expected Diff: ${expectedInterval.toFixed(3)} ms`;
+    //     document.getElementById('average-diff').innerHTML = `Actual Diff: ${averageDifference.toFixed(3)} ms`;
+
+    // }
 
     document.getElementById('captureButton').addEventListener('click', capturePressTime);
     document.getElementById('startStopButton').addEventListener('click', startStopMetronome);
